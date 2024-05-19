@@ -1,7 +1,8 @@
 # llama3 implemented from scratch
 in this file, i implemented llama3 from scratch, one tensor and matrix multiplication at a time.
 <br>
-also, im going to load tensors directly from the model file that meta provided for llama3, you need to download the weights before running this file.
+also, im going to load tensors directly from the model file that Meta provided for llama3, you need to download the weights before running this file.
+
 here is the offical link to download the weights: https://llama.meta.com/llama-downloads/
 
 <div>
@@ -311,11 +312,11 @@ q_per_token.shape
 
 
 ## positioning encoding
-we are now at a stage where we have a query vector for each token in our prompt, but if you think about it -- the indivitually query vector has no idea about the position in the prompt.
+we are now at a stage where we have a query vector for each token in our prompt, but if you think about it -- the individual query vector has no idea about the position in the prompt.
 <br><br>
 query: "the answer to the ultimate question of life, the universe, and everything is "
 <br><br>
-in our prompt we have used "the" three times, we need the query vectors of all 3 "the" tokens to have different query vectors (each of size [1x128]) based on their positions in the query. we perform these rotations using RoPE (rotory positional embedding).
+in our prompt we have used "the" three times, we need the query vectors of all 3 "the" tokens to have different query vectors (each of size [1x128]) based on their positions in the query. we perform these rotations using RoPE (rotary positional embedding).
 <br><br>
 ### RoPE
 watch this video (this is what i watched) to understand the math.
@@ -423,7 +424,7 @@ plt.show()
 ### now that we have a complex number (the angle change vector) for every token's query element
 we can convert our queries (the one we split into pairs) as complex numbers and then dot product to rotate the query based on the position
 <br>
-honeslty this is beautiful to think about :)
+honestly this is beautiful to think about :)
 
 
 ```python
@@ -486,9 +487,10 @@ q_per_token_rotated.shape
 <div>
     <img src="images/keys.png" width="600px"/>
 </div>
+
 im lazy as fuck, so im not going to go through the math for keys, the only things you need to keep in mind are:
 <br>
-&gt; keys generate key vectors also of dimention 128
+&gt; keys generate key vectors also of dimension 128
 <br>
 &gt; keys have only 1/4th the number of the weights as queries, this is because the weights for keys are shared across 4 heads at a time, to reduce the number of computations need
 <br>
@@ -622,7 +624,7 @@ during the training process of llama3, the future token qk scores are masked.
 <br>
 why? because during training we only learn to predict tokens using past tokens.
 <br>
-as a result, during inference we set the future tokens to zero.
+as a result, during training we set the future tokens to zero.
 <div>
     <img src="images/mask.png" width="600px"/>
 </div>
@@ -857,7 +859,7 @@ stacked_qkv_attention.shape
 <div>
     <img src="images/weightmatrix.png" width="600px"/>
 </div>
-one of the last things to do for a layer 0 attention is, is to multiply the weight matrix of the 
+one of the last things to do for a layer 0 attention is, is to multiply the weight of the output matrix 
 
 
 ```python
@@ -1079,7 +1081,8 @@ logits.shape
 
 
 ### the model predicted token number 2983 as the next token, is this the token number for 42?
-IM HYPING YOU UP, this is the last cell of code, hopefully you had fun :)
+
+#### IM HYPING YOU UP, this is the last cell of code, hopefully you had fun :)
 
 
 ```python
