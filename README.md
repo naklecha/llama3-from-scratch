@@ -202,7 +202,7 @@ def rms_norm(tensor, norm_weights):
     return (tensor * torch.rsqrt(tensor.pow(2).mean(-1, keepdim=True) + norm_eps)) * norm_weights
 ```
 
-# building the first first layer of the transformer
+# building the first layer of the transformer
 
 ### normalization
 you will see me accessing layer.0 from the model dict (this is the first layer)
