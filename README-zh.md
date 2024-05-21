@@ -341,7 +341,7 @@ q_per_token.shape
 
 
 ## 位置编码
-我们现在处于这样一个阶段，每个 token 都有一个 query 向量，但如果你想一想 -- 其实各个 query 向量并不知道它们在 prompt 中的位置。
+当前，每个 token 都有一个 query 向量，但如果你想一想 -- 其实各个 query 向量并不知道它们在 prompt 中的位置。
 <br><br>
 query: "the answer to the ultimate question of life, the universe, and everything is "
 <br><br>
