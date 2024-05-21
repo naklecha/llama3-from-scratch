@@ -1175,5 +1175,7 @@ tokenizer.decode([next_token.item()])
 </div>
 
 # 中文翻译 (translate)
-
 @喻四先生
+
+![image](https://github.com/ActNotSign/llama3-from-scratch/assets/7576037/8d7972f8-07b2-41b7-b2a4-f1329c1bd80d)
+
