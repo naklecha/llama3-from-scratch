@@ -1,17 +1,19 @@
-# llama3 implemented from scratch
-in this file, i implemented llama3 from scratch, one tensor and matrix multiplication at a time.
+# 从头实现 Llama3 
+在这个文件中，我从头实现了 Llama3，其中包含张量和矩阵乘法。
 <br>
-also, im going to load tensors directly from the model file that meta provided for llama3, you need to download the weights before running this file.
-here is the offical link to download the weights: https://llama.meta.com/llama-downloads/
+此外，我将直接从 Meta 提供的 Llama3 模型文件中加载张量，在运行此文件之前，您需要下载权重。
+这是官方链接： https://llama.meta.com/llama-downloads/
 
 <div>
     <img src="images/archi.png"/>
 </div>
 
-## tokenizer
-im not going to implement a bpe tokenizer (but andrej karpathy has a really clean implementation)
+## 分词器
+
+我不会实现一个 BPE 分词器（但 Andrej Karpathy 也有一个非常简洁的实现）
 <br>
-link to his implementation: https://github.com/karpathy/minbpe
+这是他的项目地址： https://github.com/karpathy/minbpe
+
 
 <div>
     <img src="images/karpathyminbpe.png" width="600"/>
@@ -27,6 +29,7 @@ import torch
 import json
 import matplotlib.pyplot as plt
 
+# 加载分词器模型路径
 tokenizer_path = "Meta-Llama-3-8B/tokenizer.model"
 special_tokens = [
             "<|begin_of_text|>",
@@ -48,6 +51,7 @@ tokenizer = tiktoken.Encoding(
     special_tokens={token: len(mergeable_ranks) + i for i, token in enumerate(special_tokens)},
 )
 
+# 测试分词器编码和解码功能
 tokenizer.decode(tokenizer.encode("hello world!"))
 ```
 
@@ -58,16 +62,17 @@ tokenizer.decode(tokenizer.encode("hello world!"))
 
 
 
-## reading the model file
-normally, reading this depends on how the model classes are written and the variable names inside them.
+## 读取模型文件
+通常，读取模型文件,往往取决于模型类的编写方式以及其中的变量名。
 <br>
-but since we are implementing llama3 from scratch we will read the file one tensor at a time.
+但由于我们要从头实现 Llama3，我们将一次性读取一个张量。
 <div>
     <img src="images/model.png" width="600"/>
 </div>
 
 
 ```python
+# 加载模型权重
 model = torch.load("Meta-Llama-3-8B/consolidated.00.pth")
 print(json.dumps(list(model.keys())[:20], indent=4))
 ```
@@ -98,6 +103,8 @@ print(json.dumps(list(model.keys())[:20], indent=4))
 
 
 ```python
+
+# 获取模型配置参数
 with open("Meta-Llama-3-8B/params.json", "r") as f:
     config = json.load(f)
 config
@@ -118,13 +125,14 @@ config
 
 
 
-## we use this config to infer details about the model like
-1. the model has 32 transformer layers
-2. each multi-head attention block has 32 heads
-3. the vocab size and so on
+## 使用这些配置推断模型的细节
+1. 模型有 32 个 Transformer 层
+2. 每个多头注意力块有 32 个头
+3. 词汇表大小等
 
 
 ```python
+# 从配置文件中提取模型参数
 dim = config["dim"]
 n_layers = config["n_layers"]
 n_heads = config["n_heads"]
@@ -136,8 +144,8 @@ norm_eps = config["norm_eps"]
 rope_theta = torch.tensor(config["rope_theta"])
 ```
 
-## converting text to tokens
-here we use tiktoken (i think an openai library) as the tokenizer
+## 将文本转换为 token
+这里我们使用 tiktoken（我觉得应该是 OpenAI 的库）作为分词器
 <div>
     <img src="images/tokens.png" width="600"/>
 </div>
@@ -145,9 +153,13 @@ here we use tiktoken (i think an openai library) as the tokenizer
 
 ```python
 prompt = "the answer to the ultimate question of life, the universe, and everything is "
+
+# 编码为token
 tokens = [128000] + tokenizer.encode(prompt)
 print(tokens)
 tokens = torch.tensor(tokens)
+
+# 将每个 token 解码为对应的文本
 prompt_split_as_tokens = [tokenizer.decode([token.item()]) for token in tokens]
 print(prompt_split_as_tokens)
 ```
@@ -156,13 +168,14 @@ print(prompt_split_as_tokens)
     ['<|begin_of_text|>', 'the', ' answer', ' to', ' the', ' ultimate', ' question', ' of', ' life', ',', ' the', ' universe', ',', ' and', ' everything', ' is', ' ']
 
 
-## converting tokens to their embedding
-IM SORRY but this is the only part of the codebase where i use an inbuilt neural network module
+## 将 token 转换为其对应的 embedding
+
+这里我们使用内置的神经网络模块
 <br>
-anyway, so our [17x1] tokens are now [17x4096], i.e. 17 embeddings (one for each token) of length 4096
+反正, 我们的 [17x1] token 现在是 [17x4096]，即每个 token 的长度为 4096 的 embeddings
 <br>
 <br>
-note: keep track of the shapes, it makes it much easier to understand everything
+注意：跟踪 shapes，这样一切将变得理解更容易
 
 <div>
     <img src="images/embeddings.png" width="600"/>
@@ -170,8 +183,12 @@ note: keep track of the shapes, it makes it much easier to understand everything
 
 
 ```python
+
+# 加载嵌入层并复制权重
 embedding_layer = torch.nn.Embedding(vocab_size, dim)
 embedding_layer.weight.data.copy_(model["tok_embeddings.weight"])
+
+# 获取未归一化的 token 嵌入
 token_embeddings_unnormalized = embedding_layer(tokens).to(torch.bfloat16)
 token_embeddings_unnormalized.shape
 ```
@@ -183,18 +200,22 @@ token_embeddings_unnormalized.shape
 
 
 
-## we then normalize the embedding using rms normalization
-please, note after this step the shapes dont change, the values are just normalized
+## 接下来我们使用 rms 归一化嵌入
+请注意，经过此步骤后 shapes 不变，只是值被归一化
+
 <br>
-things to keep in mind, we need a norm_eps (from config) because we dont want to accidently set rms to 0 and divide by 0
+需要注意的是，我们需要一个 norm_eps（来自配置）以避免不小心将 rms 设置为 0 并导致除以 0 的情况
+
 <br>
-here is the formula:
+这是公式:
 <div>
     <img src="images/rms.png" width="600"/>
 </div>
 
 
 ```python
+# rms 归一化函数
+
 # def rms_norm(tensor, norm_weights):
 #     rms = (tensor.pow(2).mean(-1, keepdim=True) + norm_eps)**0.5
 #     return tensor * (norm_weights / rms)
@@ -202,12 +223,14 @@ def rms_norm(tensor, norm_weights):
     return (tensor * torch.rsqrt(tensor.pow(2).mean(-1, keepdim=True) + norm_eps)) * norm_weights
 ```
 
-# building the first first layer of the transformer
+# 构建第一个 Transformer 层
 
-### normalization
-you will see me accessing layer.0 from the model dict (this is the first layer)
+
+### 归一化
+
+我们从模型字典中访问 layer.0（这是第一层）
 <br>
-anyway, so after normalizing our shapes are still [17x4096] same as embedding but normalized 
+归一化后 shapes 仍然是 [17x4096]，与嵌入相同但已归一化
 
 <div>
     <img src="images/norm.png" width="600"/>
@@ -215,6 +238,7 @@ anyway, so after normalizing our shapes are still [17x4096] same as embedding bu
 
 
 ```python
+# 归一化token嵌入
 token_embeddings = rms_norm(token_embeddings_unnormalized, model["layers.0.attention_norm.weight"])
 token_embeddings.shape
 ```
@@ -226,24 +250,27 @@ token_embeddings.shape
 
 
 
-### attention implemented from scratch
-let's load the attention heads of the first layer of the transformer
+### 从头实现注意力机制
+
+让我们加载第一个 Transformer 层的注意力头
+
 <div>
     <img src="images/qkv.png" width="600"/>
 </div>
 
 <br>
 
-&gt; when we load the query, key, value and output vectors from the model we notice the shapes to be [4096x4096], [1024x4096], [1024x4096], [4096x4096]
+&gt; 当我们从模型中加载 query，key，value 和 output 向量时，我们注意到 shapes 分别为 [4096x4096]，[1024x4096]，[1024x4096]，[4096x4096]
 <br>
-&gt; at first glance this is weird because ideally we want each q,k,v and o for each head individually
+&gt; 乍一看这有些奇怪，因为在理想情况下我们希望每个头单独拥有各自的 q，k，v 和 o
 <br>
-&gt; the authors of the code bundled them togeather because its easy it helps parallize attention head multiplication.
+&gt; 这里作者将其捆绑在一起，为什么会这样呢? 因为这样有助于并行化注意力头的计算
 <br>
-&gt; im going to unwrap everything... 
+&gt; 我将展开所有内容...
 
 
 ```python
+# 打印第一个层的注意力权重 shapes
 print(
     model["layers.0.attention.wq.weight"].shape,
     model["layers.0.attention.wk.weight"].shape,
@@ -255,13 +282,14 @@ print(
     torch.Size([4096, 4096]) torch.Size([1024, 4096]) torch.Size([1024, 4096]) torch.Size([4096, 4096])
 
 
-### unwrapping query
-in the next section we will unwrap the queries from multiple attention heads, the resulting shape is [32x128x4096]
+### 展开 query
+在下一节中，我们将展开多个注意力头的 query，得到的 shapes 为 [32x128x4096]
 <br><br>
-here, 32 is the number of attention heads in llama3, 128 is the size of the query vector and 4096 is the size of the token embedding
-
+这里的 32 是 Llama3 的注意力头数量，128 是 query 向量的大小，4096 是 token 嵌入的大小
 
 ```python
+# 重塑 query 权重为[头数，头维度，嵌入维度]
+
 q_layer0 = model["layers.0.attention.wq.weight"]
 head_dim = q_layer0.shape[0] // n_heads
 q_layer0 = q_layer0.view(n_heads, head_dim, dim)
@@ -275,8 +303,8 @@ q_layer0.shape
 
 
 
-### im going to implement the first head of the first layer
-here i access the query weight matrix first head of the first layer, the size of this query weight matrix is [128x4096]
+### 实现第一层的第一个头
+这里我查询了第一个层的第一个头的 query 权重矩阵，其大小为 [128x4096]
 
 
 ```python
@@ -291,8 +319,10 @@ q_layer0_head0.shape
 
 
 
-### we now multiply the query weights with the token embedding, to recive a query for the token
-here you can see the resulting shape is [17x128], this is because we have 17 tokens and for each token there is a 128 length query.
+### 我们现在将 query 权重与 token 嵌入相乘，以获得每个 token 的 query
+
+这里你可以看到得到的 shape 是 [17x128]，这是因为我们有 17 个 token，每个 token 有一个长度为 128 的 query
+
 <div>
     <img src="images/q_per_token.png" width="600"/>
 </div>
@@ -310,15 +340,16 @@ q_per_token.shape
 
 
 
-## positioning encoding
-we are now at a stage where we have a query vector for each token in our prompt, but if you think about it -- the indivitually query vector has no idea about the position in the prompt.
+## 位置编码
+我们现在处于这样一个阶段，每个 token 都有一个 query 向量，但如果你想一想 -- 其实各个 query 向量并不知道它们在 prompt 中的位置。
 <br><br>
 query: "the answer to the ultimate question of life, the universe, and everything is "
 <br><br>
-in our prompt we have used "the" three times, we need the query vectors of all 3 "the" tokens to have different query vectors (each of size [1x128]) based on their positions in the query. we perform these rotations using RoPE (rotory positional embedding).
+在我们的示例 promp t中，我们使用了三次 "the"，我们需要根据它们在 prompt 中的位置为每个 "the" token 生成不同的 query 向量（每个长度为128）。我们可以使用 RoPE（旋转位置编码）来实现这一点。
 <br><br>
+
 ### RoPE
-watch this video (this is what i watched) to understand the math.
+来看看这个视频(我就是看的这个)可以理解其中的数据学逻辑。
 https://www.youtube.com/watch?v=o29P0Kpobz0&t=530s
 
 
@@ -338,10 +369,11 @@ q_per_token_split_into_pairs.shape
     torch.Size([17, 64, 2])
 
 
+这里我们为 prompt 中每个位置生成了旋转位置编码。可以看到，这些编码是正弦和余弦函数的组合。
 
-in the above step, we split the query vectors into pairs, we apply a rotational angle shift to each pair!
+在上的步骤里, 我们将query 向量分成对, 并对每对应用旋转角度移位!
 <br><br>
-we now have a vector of size [17x64x2], this is the 128 length queries split into 64 pairs for each token in the prompt! each of those 64 pairs will be rotated by m*(theta) where m is the position of the token for which we are rotating the query!
+我们现在有一个大小为 [17x64x2] 的向量，这是针对 prompt 中的每个 token 将 128 个长度的 query 分为 64 对！ 这 64 对中的每一对都将旋转 m*(theta)，其中 m 是我们旋转查询的标记的位置！
 
 
 <div>
