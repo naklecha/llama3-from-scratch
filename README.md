@@ -402,7 +402,7 @@ freqs_for_each_token = torch.outer(torch.arange(17), freqs)
 freqs_cis = torch.polar(torch.ones_like(freqs_for_each_token), freqs_for_each_token)
 freqs_cis.shape
 
-# viewing tjhe third row of freqs_cis
+# viewing the third row of freqs_cis
 value = freqs_cis[3]
 plt.figure()
 for i, element in enumerate(value[:17]):
