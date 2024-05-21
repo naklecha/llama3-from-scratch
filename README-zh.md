@@ -1173,3 +1173,7 @@ tokenizer.decode([next_token.item()])
 <div>
     <img src="images/a10.png" width="600px"/>
 </div>
+
+# 中文翻译 (translate)
+
+@喻四先生
