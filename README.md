@@ -2,7 +2,7 @@
 in this file, i implemented llama3 from scratch, one tensor and matrix multiplication at a time.
 <br>
 also, im going to load tensors directly from the model file that meta provided for llama3, you need to download the weights before running this file.
-here is the offical link to download the weights: https://llama.meta.com/llama-downloads/
+here is the official link to download the weights: https://llama.meta.com/llama-downloads/
 
 <div>
     <img src="images/archi.png"/>
