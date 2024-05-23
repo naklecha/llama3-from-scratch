@@ -988,7 +988,6 @@ for layer in range(n_layers):
     k_layer = k_layer.view(n_kv_heads, k_layer.shape[0] // n_kv_heads, dim)
     v_layer = model[f"layers.{layer}.attention.wv.weight"]
     v_layer = v_layer.view(n_kv_heads, v_layer.shape[0] // n_kv_heads, dim)
-    w_layer = model[f"layers.{layer}.attention.wo.weight"]
     for head in range(n_heads):
         q_layer_head = q_layer[head]
         k_layer_head = k_layer[head//4]
